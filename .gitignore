@@ -1,1 +1,5 @@
 config.*
+.serverless
+.webpack
+node_modules/
+.js.map
