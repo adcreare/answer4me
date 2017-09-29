@@ -9,12 +9,14 @@
   "devDependencies": {
     "serverless-webpack": "^2.2.0",
     "ts-loader": "^2.3.1",
-    "typescript": "^2.4.2",
+    "typescript": "^2.5.3",
     "webpack": "^3.3.0"
   },
   "author": "The serverless webpack authors (https://github.com/elastic-coders/serverless-webpack)",
   "license": "MIT",
   "dependencies": {
+    "request": "^2.83.0",
+    "request-promise-native": "^1.0.5",
     "twilio": "^3.6.5"
   }
 }
