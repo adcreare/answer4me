@@ -9,6 +9,9 @@ provider:
   name: aws
   runtime: nodejs6.10
 
+custom:
+  DynamoDBTableName: answer4me-call-log
+
 functions:
   # Example with LAMBDA-PROXY integration
   # Invoking locally:
@@ -27,3 +30,19 @@ functions:
 
   checkgetrecording:
     handler: checkgetrecording.phonein
+
+resources:
+  Resources:
+      DynamoDBTable:
+        Type: "AWS::DynamoDB::Table"
+        Properties:
+          TableName: ${self:custom.DynamoDBTableName}
+          AttributeDefinitions:
+            - AttributeName: callid
+              AttributeType: S
+          KeySchema:
+            - AttributeName: callid
+              KeyType: HASH
+          ProvisionedThroughput:
+            ReadCapacityUnits: "1"
+            WriteCapacityUnits: "1"
