@@ -1,10 +1,27 @@
 
 // var twilio = require("twilio");
+import DynamoDB = require("aws-sdk/clients/dynamodb");
 import * as twilio from 'twilio';
 import {Config} from './config'
 
 export const phonein = (event, context, cb) => {
 
+  if(event.body.CallStatus == 'completed') {
+    TriggerProcessCompletedCallLambda();
+  }
+  else{
+    ProcessNewCall(event,cb)
+  }
+
+
+}
+
+function TriggerProcessCompletedCallLambda(){
+  console.log('TriggerProcessCompletedCallLambda');
+}
+
+function ProcessNewCall(event,cb)
+{
   var twiml = new twilio.twiml.VoiceResponse
   twiml.play({},Config.welcomeMP3FileUrl);
   // twiml.say('Hello, David is unavailable at the moment, this is answer4me. Please leave a message after the tone');
@@ -21,6 +38,49 @@ export const phonein = (event, context, cb) => {
 
   cb(null,twiml.toString());
 
+  try{
+    PutCallInDynamoDB(event.body.CallSid,event.body.CallerCountry,event.body.CallerState,
+      event.body.CallerZip,event.body.CallerCity,event.body.Caller)
+  }
+  catch (e){
+    console.log('exception thrown with dynamo function call: ' + e);
+  }
 
 }
 
+
+function PutCallInDynamoDB(callid,CallerCountry,CallerState,CallerZip,CallerCity,Caller){
+
+  let dynamodb = new DynamoDB({region: 'us-east-1'});
+
+  const params = {
+    Item: {
+      "callid": {
+        S: callid
+      }, 
+      "CallerCountry": {
+        S: CallerCountry
+      }, 
+      "CallerState": {
+        S: CallerState
+      },
+      "CallerZip": {
+        S: CallerZip
+      },
+      "CallerCity": {
+        S: CallerCity
+      },
+      "Caller": {
+        S: Caller
+      }
+    },
+    TableName: "answer4me-call-log"
+   };
+
+
+   dynamodb.putItem(params, function(err, data) {
+    if (err) console.log(err, err.stack); // an error occurred
+    else     console.log(data);           // successful response
+  });
+
+}
