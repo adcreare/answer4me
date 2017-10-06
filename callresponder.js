@@ -2,18 +2,34 @@
 exports.__esModule = true;
 // var twilio = require("twilio");
 var DynamoDB = require("aws-sdk/clients/dynamodb");
+var Lambda = require("aws-sdk/clients/lambda");
 var twilio = require("twilio");
 var config_1 = require("./config");
 exports.phonein = function (event, context, cb) {
     if (event.body.CallStatus == 'completed') {
-        TriggerProcessCompletedCallLambda();
+        TriggerProcessCompletedCallLambda(cb);
     }
     else {
         ProcessNewCall(event, cb);
     }
 };
-function TriggerProcessCompletedCallLambda() {
+function TriggerProcessCompletedCallLambda(cb) {
     console.log('TriggerProcessCompletedCallLambda');
+    var lambda = new Lambda({ region: 'us-east-1' });
+    var params = {
+        FunctionName: 'answer4me-dev-checkgetrecording'
+    };
+    lambda.invoke(params, function (err, data) {
+        if (err) {
+            console.log('Error Calling lambda');
+            console.log(err, err.stack); // an error occurred
+            cb(err, 'unable to call getrecording');
+        }
+        else {
+            console.log(data); // successful response
+            cb(null, 'Completed');
+        }
+    });
 }
 function ProcessNewCall(event, cb) {
     var twiml = new twilio.twiml.VoiceResponse;

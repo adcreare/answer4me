@@ -83,6 +83,7 @@ function main() {
                     listOfNotifications = _a.sent();
                     winston.info('Make notification calls');
                     MakeNotifications(listOfNotifications);
+                    CleanUpRecordings(listOfNotifications);
                     //MakeNotifications(listOfNotifications);
                     // listOfNotifications[]
                     // TODO
@@ -139,7 +140,7 @@ function DownloadAndUploadAllCallAudio(listOfNotifications) {
                 case 2:
                     _a.recordingFile = _b.sent();
                     uploadFileToS3('answer-4me', 'callrecordings', listOfNotifications[i].recordingFileName, listOfNotifications[i].recordingFile);
-                    listOfNotifications[i].setRecordingPathURI('https://s3.amazonaws.com/answer-4me/callrecordings/' + listOfNotifications[i].recordingFileName);
+                    listOfNotifications[i].setRecordingPathURI(getSigngedURL('answer-4me', 'callrecordings', listOfNotifications[i].recordingFileName));
                     _b.label = 3;
                 case 3:
                     i++;
@@ -291,6 +292,27 @@ function uploadFileToS3(bucket, keyprefix, filename, file) {
         else {
             winston.info("File uploaded to S3: " + filename);
         }
+    });
+}
+function getSigngedURL(bucket, keyprefix, filename) {
+    var s3 = new S3({ region: 'us-east-1' });
+    var key = keyprefix + '/' + filename;
+    var params = { Bucket: bucket, Key: key, Expires: 4000 };
+    var url = s3.getSignedUrl('getObject', params);
+    console.log('The URL is', url); // expires in 4000 seconds (over an hour) 
+    return url;
+}
+function CleanUpRecordings(listOfNotifications) {
+    listOfNotifications.forEach(function (element) {
+        deleteRecording(element.recordingid);
+    });
+}
+function deleteRecording(recordingSid) {
+    client.recordings(recordingSid)
+        .remove()
+        .then(function () { return console.log("Sid " + recordingSid + " deleted successfully."); })["catch"](function (err) {
+        console.log(err.status);
+        throw err;
     });
 }
 //# sourceMappingURL=checkgetrecording.js.map

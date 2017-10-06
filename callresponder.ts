@@ -1,13 +1,14 @@
 
 // var twilio = require("twilio");
 import DynamoDB = require("aws-sdk/clients/dynamodb");
+import Lambda = require("aws-sdk/clients/lambda");
 import * as twilio from 'twilio';
 import {Config} from './config'
 
 export const phonein = (event, context, cb) => {
 
   if(event.body.CallStatus == 'completed') {
-    TriggerProcessCompletedCallLambda();
+    TriggerProcessCompletedCallLambda(cb);
   }
   else{
     ProcessNewCall(event,cb)
@@ -16,8 +17,28 @@ export const phonein = (event, context, cb) => {
 
 }
 
-function TriggerProcessCompletedCallLambda(){
+function TriggerProcessCompletedCallLambda(cb){
   console.log('TriggerProcessCompletedCallLambda');
+
+  let lambda = new Lambda({region:'us-east-1'});
+
+  const params = {
+    FunctionName: 'answer4me-dev-checkgetrecording', /* required */
+  };
+  lambda.invoke(params, function(err, data) {
+    if (err)
+    {
+      console.log('Error Calling lambda');
+      console.log(err, err.stack); // an error occurred
+      cb(err,'unable to call getrecording');
+    } 
+    else{
+      console.log(data);           // successful response
+      cb(null,'Completed');
+    }
+
+  });
+
 }
 
 function ProcessNewCall(event,cb)

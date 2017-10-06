@@ -49,6 +49,8 @@ async function main(){
   winston.info('Make notification calls')
   MakeNotifications(listOfNotifications);
 
+
+  CleanUpRecordings(listOfNotifications);
   //MakeNotifications(listOfNotifications);
 
 
@@ -114,13 +116,15 @@ async function DownloadAndUploadAllCallAudio(listOfNotifications: Array<Notifica
   {
     listOfNotifications[i].recordingFile = await httpGet(listOfNotifications[i].recordingPathURI);
     uploadFileToS3('answer-4me','callrecordings',listOfNotifications[i].recordingFileName,listOfNotifications[i].recordingFile);
-    listOfNotifications[i].setRecordingPathURI('https://s3.amazonaws.com/answer-4me/callrecordings/' + listOfNotifications[i].recordingFileName);
+    listOfNotifications[i].setRecordingPathURI(getSigngedURL('answer-4me','callrecordings',
+                                                              listOfNotifications[i].recordingFileName));
+                                                              
+    // listOfNotifications[i].setRecordingPathURI('https://s3.amazonaws.com/answer-4me/callrecordings/' + 
+    //                                             listOfNotifications[i].recordingFileName);
 
   }
   return listOfNotifications;
 }
-
-
 
 async function GatherCallerInformation(listOfNotifications: Array<Notification>) 
 {
@@ -263,4 +267,36 @@ function uploadFileToS3(bucket,keyprefix,filename,file){
     }
   });
 
+}
+
+function getSigngedURL(bucket,keyprefix,filename): string
+{
+  let s3 = new S3({region:'us-east-1'});
+  let key: string = keyprefix + '/' + filename
+  const params = {Bucket: bucket, Key: key, Expires: 4000};
+
+  var url: string = s3.getSignedUrl('getObject', params);
+  console.log('The URL is', url); // expires in 4000 seconds (over an hour) 
+
+  return url
+  
+}
+
+function CleanUpRecordings(listOfNotifications: Array<Notification>)
+{
+  listOfNotifications.forEach(element => {
+    deleteRecording(element.recordingid);
+  });
+}
+
+
+function deleteRecording(recordingSid)
+{
+  client.recordings(recordingSid)
+  .remove()
+  .then(() => console.log(`Sid ${recordingSid} deleted successfully.`))
+  .catch((err) => {
+    console.log(err.status);
+    throw err;
+  });
 }
