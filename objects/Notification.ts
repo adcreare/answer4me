@@ -37,13 +37,13 @@ export class Notification {
     // }
 
     let response = `*New Voicemail!* \n
-                Caller: ${this.CallerInfo.Caller} \n
-                City: ${this.CallerInfo.CallerCity} \n
-                Country: ${this.CallerInfo.CallerCountry} \n
-                State: ${this.CallerInfo.CallerState} \n
-                Message Duration: ${this.CallerInfo.CallDuration} Left at ${this.CallerInfo.CalledDate} \n \n
-                
-                URL: ${this.recordingPathURI} \n\n`;
+    Caller: ${this.CallerInfo.Caller} \n
+    City: ${this.CallerInfo.CallerCity} \n
+    Country: ${this.CallerInfo.CallerCountry} \n
+    State: ${this.CallerInfo.CallerState} \n
+    Zip: ${this.CallerInfo.CallerZip} \n
+    Message Duration: ${this.CallerInfo.CallDuration} Left at ${this.CallerInfo.CalledDate} \n \n
+    URL: ${this.recordingPathURI} \n\n`;
 
     return response;
   }

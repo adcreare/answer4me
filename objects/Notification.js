@@ -22,7 +22,7 @@ var Notification = /** @class */ (function () {
         //   CallInfo: this.CallerInfo,
         //   RecordingURL: this.recordingPathURI
         // }
-        var response = "*New Voicemail!* \n\n                Caller: " + this.CallerInfo.Caller + " \n\n                City: " + this.CallerInfo.CallerCity + " \n\n                Country: " + this.CallerInfo.CallerCountry + " \n\n                State: " + this.CallerInfo.CallerState + " \n\n                Message Duration: " + this.CallerInfo.CallDuration + " Left at " + this.CallerInfo.CalledDate + " \n \n\n                \n                URL: " + this.recordingPathURI + " \n\n";
+        var response = "*New Voicemail!* \n\n    Caller: " + this.CallerInfo.Caller + " \n\n    City: " + this.CallerInfo.CallerCity + " \n\n    Country: " + this.CallerInfo.CallerCountry + " \n\n    State: " + this.CallerInfo.CallerState + " \n\n    Zip: " + this.CallerInfo.CallerZip + " \n\n    Message Duration: " + this.CallerInfo.CallDuration + " Left at " + this.CallerInfo.CalledDate + " \n \n\n    URL: " + this.recordingPathURI + " \n\n";
         return response;
     };
     return Notification;
