@@ -18,6 +18,14 @@ provider:
       Action:
         - "lambda:InvokeFunction"
       Resource: "*"
+    - Effect: "Allow"
+      Action:
+        - "s3:PutObject"
+        - "s3:GetObject"
+      Resource: 
+        - "arn:aws:s3:::answer-4me"
+        - "arn:aws:s3:::answer-4me/*"
+
 
 custom:
   DynamoDBTableName: answer4me-call-log

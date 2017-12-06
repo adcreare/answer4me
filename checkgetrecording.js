@@ -83,7 +83,7 @@ function main() {
                     listOfNotifications = _a.sent();
                     winston.info('Make notification calls');
                     MakeNotifications(listOfNotifications);
-                    CleanUpRecordings(listOfNotifications);
+                    // CleanUpRecordings(listOfNotifications);
                     //MakeNotifications(listOfNotifications);
                     // listOfNotifications[]
                     // TODO
@@ -136,7 +136,7 @@ function DownloadAndUploadAllCallAudio(listOfNotifications) {
                 case 1:
                     if (!(i < listOfNotifications.length)) return [3 /*break*/, 4];
                     _a = listOfNotifications[i];
-                    return [4 /*yield*/, httpGet(listOfNotifications[i].recordingPathURI)];
+                    return [4 /*yield*/, httpGetBinary(listOfNotifications[i].recordingPathURI)];
                 case 2:
                     _a.recordingFile = _b.sent();
                     uploadFileToS3('answer-4me', 'callrecordings', listOfNotifications[i].recordingFileName, listOfNotifications[i].recordingFile);
@@ -235,6 +235,13 @@ function httpGet(callurl) {
         });
     });
 }
+function httpGetBinary(callurl) {
+    return __awaiter(this, void 0, void 0, function () {
+        return __generator(this, function (_a) {
+            return [2 /*return*/, request(callurl, { encoding: null })];
+        });
+    });
+}
 function getCallTwilio(callSid) {
     return __awaiter(this, void 0, void 0, function () {
         return __generator(this, function (_a) {
@@ -315,4 +322,3 @@ function deleteRecording(recordingSid) {
         throw err;
     });
 }
-//# sourceMappingURL=checkgetrecording.js.map

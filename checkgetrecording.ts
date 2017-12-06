@@ -39,10 +39,13 @@ async function main(){
 
   winston.info('getting list of recordings available on twilio');
   let listOfRecordings  = await listAllRecordings(); 
+
   winston.info('processing to notification obj');
   let listOfNotifications = await processRecordings2Notifcations(listOfRecordings)
+
   winston.info('getting caller information')
   listOfNotifications = await GatherCallerInformation(listOfNotifications)
+
   winston.info('downloading audio and uploading to S3')
   listOfNotifications = await DownloadAndUploadAllCallAudio(listOfNotifications);
 
@@ -50,7 +53,7 @@ async function main(){
   MakeNotifications(listOfNotifications);
 
 
-  CleanUpRecordings(listOfNotifications);
+  // CleanUpRecordings(listOfNotifications);
   //MakeNotifications(listOfNotifications);
 
 
@@ -114,7 +117,7 @@ async function DownloadAndUploadAllCallAudio(listOfNotifications: Array<Notifica
 {
   for(let i: number = 0; i < listOfNotifications.length; i++)
   {
-    listOfNotifications[i].recordingFile = await httpGet(listOfNotifications[i].recordingPathURI);
+    listOfNotifications[i].recordingFile = await httpGetBinary(listOfNotifications[i].recordingPathURI);
     uploadFileToS3('answer-4me','callrecordings',listOfNotifications[i].recordingFileName,listOfNotifications[i].recordingFile);
     listOfNotifications[i].setRecordingPathURI(getSigngedURL('answer-4me','callrecordings',
                                                               listOfNotifications[i].recordingFileName));
@@ -197,9 +200,14 @@ async function addCallerInformation(notification: Notification)
   return notification //can i even return this?
 }
 
-async function httpGet(callurl : string) : Promise<any>
+async function httpGet(callurl : string,) : Promise<any>
 {
   return request(callurl);
+}
+
+async function httpGetBinary(callurl : string,) : Promise<any>
+{
+  return request(callurl,{ encoding : null });
 }
 
 async function getCallTwilio(callSid : string) : Promise<any>
