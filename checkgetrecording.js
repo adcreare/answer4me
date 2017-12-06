@@ -83,7 +83,7 @@ function main() {
                     listOfNotifications = _a.sent();
                     winston.info('Make notification calls');
                     MakeNotifications(listOfNotifications);
-                    // CleanUpRecordings(listOfNotifications);
+                    CleanUpRecordings(listOfNotifications);
                     //MakeNotifications(listOfNotifications);
                     // listOfNotifications[]
                     // TODO

@@ -53,7 +53,7 @@ async function main(){
   MakeNotifications(listOfNotifications);
 
 
-  // CleanUpRecordings(listOfNotifications);
+  CleanUpRecordings(listOfNotifications);
   //MakeNotifications(listOfNotifications);
 
 
