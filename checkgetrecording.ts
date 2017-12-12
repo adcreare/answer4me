@@ -2,6 +2,7 @@
 // var twilio = require("twilio");
 import * as twilio from 'twilio';
 import * as winston from 'winston';
+import * as mp3Duration from 'mp3-duration';
 
 import DynamoDB = require("aws-sdk/clients/dynamodb");
 import S3 = require("aws-sdk/clients/s3");
@@ -11,88 +12,91 @@ import {Notification} from './objects/Notification'
 import {CallInfo} from './objects/CallInfo'
 
 import * as request from 'request-promise-native';
-/*
-^^^^ make note somewhere how this can be 
-import {Request} from 'request-promise-native';
 
-usage New Request(uri) //almost works needs some options.uri set
-
-*/
 
 winston.info('Starting Application Answer 4 Me');
 winston.level = 'debug'
 
 const accountSid = Config.accountSid
 const authToken = Config.authToken
+const twilioClient = twilio(accountSid, authToken);
 
-const client = twilio(accountSid, authToken);
+export interface TwilioCall {
+  callSid?: string;
+  sid?: string;
+  uri?: string;
+}
+
 
 export const phonein = (event, context, cb) => {
  
-
-  main();
+  try{
+    main(cb);
+  }
+  catch (e)
+  {
+    winston.error(`Exception received calling main: ${e}`);
+  }
 
 
 }
 
-async function main(){
+async function main(cb){
 
   winston.info('getting list of recordings available on twilio');
-  let listOfRecordings  = await listAllRecordings(); 
 
-  winston.info('processing to notification obj');
-  let listOfNotifications = await processRecordings2Notifcations(listOfRecordings)
-
-  winston.info('getting caller information')
-  listOfNotifications = await GatherCallerInformation(listOfNotifications)
-
-  winston.info('downloading audio and uploading to S3')
-  listOfNotifications = await DownloadAndUploadAllCallAudio(listOfNotifications);
-
-  winston.info('Make notification calls')
-  MakeNotifications(listOfNotifications);
+  let listOfRecordings: TwilioCall[];
+  try{
+    listOfRecordings  = await listAllRecordings(); 
+  }
+  catch(e){
+    const error = new Error(`unable to receive calls from twillo: ${e}`)
+    winston.error(error);
+    cb(error); // make it retry in lambda
+  }  
 
 
-  CleanUpRecordings(listOfNotifications);
-  //MakeNotifications(listOfNotifications);
-
-
-  // listOfNotifications[]
-
-  // TODO
-  // DONE 1. For each record
-  // DONE 2. Get Notification info
-  // DONE 3. Get all information
-  // 3. Get recording file 
-  // 4. Notification lex and convert to txt
-  // 5. Run a notification event (class maybe and push all the notifications)
-
-  //console.log(listOfNotifications);
-  console.log("--------------------------")
-
-  //tasks
-
-
-}
-
-function MakeNotifications(listAllRecordings: Array<Notification>)
-{
-  listAllRecordings.forEach(notification => {
-
-    //send email 
-    //send slack msg 
-    notification.getNotification();
+  listOfRecordings.forEach(async (call: TwilioCall) => {
+    let notification: Notification;
     
-    PostSlackMessage(Config.slackPostWebhoock,notification.getNotification());
+    try{
+      winston.info('processing to notification obj');
+      notification = await processRecording2Notifcation(call)
+  
+      winston.info('getting caller information')
+      notification = await GatherCallerInformation(notification)
+  
+      winston.info('downloading audio and uploading to S3')
+      notification = await DownloadAndUploadAllCallAudio(notification);
+  
+      winston.info('Make notification')
+      MakeNotification(notification);
+  
+      winston.info('clean up ')
+      CleanUpTwilioRecording(notification.recordingid);
+    }
+    catch (e){
+      
+      winston.error(`Exception thrown processing a call: ${call} - Exception: ${e}`);
+      const message = `Exception thrown processing a call. Exception: ${e};`
+        +`Call info ${call}`;
+
+      PostSlackMessage(Config.slackPostWebhoock,message);
+      PostSlackMessage(Config.slackPostWebhoock,`Notification object: ${JSON.stringify(notification)}`);
+
+    }
 
   });
 
+}
 
+function MakeNotification(notification: Notification)
+{
+  PostSlackMessage(Config.slackPostWebhoock,notification.getNotification());
 }
 
 function PostSlackMessage(slackurl,messageObject)
 {
-
 
    const params = {
      method: 'POST',
@@ -102,42 +106,34 @@ function PostSlackMessage(slackurl,messageObject)
 
   request.post(params, function (err, response, body) {
     if(err){
-      winston.error("Received error on slack message:" + err);
+      winston.error('Received error on slack message:' + err);
     }
     else{
       winston.info("Posted to slack!");
-      //winston.info(response);
-      //winston.info(body);
     }
   });
 
 }
 
-async function DownloadAndUploadAllCallAudio(listOfNotifications: Array<Notification>) 
+async function DownloadAndUploadAllCallAudio(notification: Notification) 
 {
-  for(let i: number = 0; i < listOfNotifications.length; i++)
-  {
-    listOfNotifications[i].recordingFile = await httpGetBinary(listOfNotifications[i].recordingPathURI);
-    uploadFileToS3('answer-4me','callrecordings',listOfNotifications[i].recordingFileName,listOfNotifications[i].recordingFile);
-    listOfNotifications[i].setRecordingPathURI(getSigngedURL('answer-4me','callrecordings',
-                                                              listOfNotifications[i].recordingFileName));
-                                                              
-    // listOfNotifications[i].setRecordingPathURI('https://s3.amazonaws.com/answer-4me/callrecordings/' + 
-    //                                             listOfNotifications[i].recordingFileName);
 
-  }
-  return listOfNotifications;
+  notification.recordingFile = await httpGetBinary(notification.recordingPathURI);
+  await uploadFileToS3('answer-4me','callrecordings',notification.recordingFileName,notification.recordingFile);
+  notification.setRecordingPathURI(getSigngedURL('answer-4me','callrecordings',
+        notification.recordingFileName));
+                                                              
+  return notification;
 }
 
-async function GatherCallerInformation(listOfNotifications: Array<Notification>) 
+async function GatherCallerInformation(notification: Notification) 
 {
   winston.debug('Entered GatherCallerInformation');
-  for(let i: number = 0; i < listOfNotifications.length; i++)
-  {
-    let callInfoPromise = await addCallerInformation(listOfNotifications[i]);
-    listOfNotifications[i] = callInfoPromise;
-  }
-  return listOfNotifications;
+
+  let callInfoPromise = await addCallerInformation(notification);
+  notification = callInfoPromise;
+
+  return notification;
 }
 
 async function addCallerInformation(notification: Notification)
@@ -153,6 +149,7 @@ async function addCallerInformation(notification: Notification)
 
   let twilioCallData = await httpGet(url);
   twilioCallData = JSON.parse(twilioCallData);
+  winston.debug(JSON.stringify(twilioCallData));
 
   let dynamodbCallLog;
 
@@ -160,7 +157,6 @@ async function addCallerInformation(notification: Notification)
     let dynamodbCallLog = await getCallLogDynamoDB(notification.callSid);
     let dynDBExpectedKeys = callInfo.getListOfCallerObjectKeys();
     winston.debug('DynamoDB output');
-    // console.log(dynamodbCallLog.Item.CallerZip.S);
     winston.debug(dynamodbCallLog);
     winston.debug('DynamoDB expected Keys');
     winston.debug(dynDBExpectedKeys);
@@ -175,28 +171,26 @@ async function addCallerInformation(notification: Notification)
     winston.info('dynamodb said no call log found');
     winston.debug(e);
 
-
   }  // TODO: whole try catch block is a mess FIX!
   
 
-
-
-
-  //TODO make query to dynamo to try and get location for that call
   callInfo.Caller = twilioCallData.from_formatted
-  callInfo.CallDuration = twilioCallData.duration
+  
   callInfo.CalledDate = twilioCallData.start_time
     
 
+  // try and get duration
+  try{
+    callInfo.CallDuration = await getMP3duration(notification.recordingFile)
+  }
+  catch(e)
+  {
+    winston.error('unable to parse duration off mp3. Using provided value (if set)')
+    callInfo.CallDuration = twilioCallData.duration // maybe unknow (source null)
+  }
+
   notification.setCallerInfo(callInfo);
   
-  //console.log(callData.subresource_uris);
-
-  // console.log(JSON.parse(callData));
-  //console.log(callData);
-  // console.log('^ yup ');
-  // console.log("dynamodb output");
-
   return notification //can i even return this?
 }
 
@@ -212,7 +206,7 @@ async function httpGetBinary(callurl : string,) : Promise<any>
 
 async function getCallTwilio(callSid : string) : Promise<any>
 {
-  return client.calls(callSid);
+  return twilioClient.calls(callSid);
 }
 
 
@@ -233,31 +227,26 @@ async function getCallLogDynamoDB(callid) : Promise<any>
 }
 
 
-function processRecordings2Notifcations(listOfRecordings) : Array<Notification>
+function processRecording2Notifcation(recording: TwilioCall) : Notification
 {
-  let notifications: Array<Notification> = new Array();
 
-  listOfRecordings.forEach(recording => {
-    let notification: Notification = new Notification();
+  let notification: Notification = new Notification();
 
-    notification.callSid = recording.callSid;
-    notification.recordingid = recording.sid;
-    notification.setRecordingPathURI('https://api.twilio.com' + recording.uri.replace(".json",".mp3"));
+  notification.callSid = recording.callSid;
+  notification.recordingid = recording.sid;
+  notification.setRecordingPathURI('https://api.twilio.com' + recording.uri.replace(".json",".mp3"));
 
-    notifications.push(notification);
-
-  });
-
-  return notifications;
+  return notification;
 }
 
 async function listAllRecordings():Promise<any>
 {
-  return client.recordings.list();
+  return twilioClient.recordings.list();
 }
 
-function uploadFileToS3(bucket,keyprefix,filename,file){
-  let s3 = new S3({region:'us-east-1'});
+async function uploadFileToS3(bucket,keyprefix,filename,file){
+
+  const s3 = new S3({region:'us-east-1'});
 
   const params = {
     Body: file, 
@@ -265,15 +254,15 @@ function uploadFileToS3(bucket,keyprefix,filename,file){
     Key: keyprefix + '/' + filename 
    };
 
-  s3.putObject(params, function(err, data) {
-    if (err){
-      winston.debug(err, err.stack); // an error occurred
-      winston.error('failed S3 upload: '+err);
-    } 
-    else{
-      winston.info("File uploaded to S3: " + filename);
-    }
-  });
+  try{
+    await s3.putObject(params).promise(); 
+    winston.info(`File uploaded to S3:  ${filename}`);
+  }
+  catch(e) {
+    winston.debug(e); // an error occurred
+    winston.error(`failed S3 upload: ${e}`);
+    throw new Error('unable to upload to S3');
+  }
 
 }
 
@@ -290,21 +279,34 @@ function getSigngedURL(bucket,keyprefix,filename): string
   
 }
 
-function CleanUpRecordings(listOfNotifications: Array<Notification>)
-{
-  listOfNotifications.forEach(element => {
-    deleteRecording(element.recordingid);
-  });
-}
 
-
-function deleteRecording(recordingSid)
+function CleanUpTwilioRecording(recordingSid: string)
 {
-  client.recordings(recordingSid)
+  twilioClient.recordings(recordingSid)
   .remove()
   .then(() => console.log(`Sid ${recordingSid} deleted successfully.`))
   .catch((err) => {
     console.log(err.status);
     throw err;
   });
+}
+
+
+function getMP3duration(file: Buffer): Promise<string>
+{
+
+  return new Promise( (resolve,reject) => {
+
+    mp3Duration(file, function(err, duration){
+      if(err) 
+      {
+        winston.error(`unable to parse mp3 for duration: ${err}`);
+        reject(err);
+      }
+      winston.debug(`obtained length of mp3 ${duration}`);
+      resolve(duration);
+    })
+  })
+
+
 }
