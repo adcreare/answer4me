@@ -98,6 +98,9 @@ function main(cb) {
                                     return [4 /*yield*/, DownloadAndUploadAllCallAudio(notification)];
                                 case 3:
                                     notification = _a.sent();
+                                    // winston.info('try and get recording length')
+                                    // await notification.setCallerInfo(getRecordingLength(
+                                    //   notification.getCallerInfo(),notification.recordingFile));
                                     winston.info('Make notification');
                                     MakeNotification(notification);
                                     winston.info('clean up ');
@@ -175,27 +178,27 @@ function GatherCallerInformation(notification) {
 }
 function addCallerInformation(notification) {
     return __awaiter(this, void 0, void 0, function () {
-        var callInfo, callObject, url, twilioCallData, dynamodbCallLog, dynamodbCallLog_1, dynDBExpectedKeys, e_3, _a, e_4;
-        return __generator(this, function (_b) {
-            switch (_b.label) {
+        var callInfo, callObject, url, twilioCallData, dynamodbCallLog, dynamodbCallLog_1, dynDBExpectedKeys, e_3;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
                 case 0:
                     callInfo = new CallInfo_1.CallInfo();
                     return [4 /*yield*/, getCallTwilio(notification.callSid)];
                 case 1:
-                    callObject = _b.sent();
+                    callObject = _a.sent();
                     url = 'https://' + accountSid + ':' + authToken
                         + '@api.twilio.com/2010-04-01' + callObject._uri;
                     return [4 /*yield*/, httpGet(url)];
                 case 2:
-                    twilioCallData = _b.sent();
+                    twilioCallData = _a.sent();
                     twilioCallData = JSON.parse(twilioCallData);
                     winston.debug(JSON.stringify(twilioCallData));
-                    _b.label = 3;
+                    _a.label = 3;
                 case 3:
-                    _b.trys.push([3, 5, , 6]);
+                    _a.trys.push([3, 5, , 6]);
                     return [4 /*yield*/, getCallLogDynamoDB(notification.callSid)];
                 case 4:
-                    dynamodbCallLog_1 = _b.sent();
+                    dynamodbCallLog_1 = _a.sent();
                     dynDBExpectedKeys = callInfo.getListOfCallerObjectKeys();
                     winston.debug('DynamoDB output');
                     winston.debug(dynamodbCallLog_1);
@@ -207,27 +210,14 @@ function addCallerInformation(notification) {
                     });
                     return [3 /*break*/, 6];
                 case 5:
-                    e_3 = _b.sent();
+                    e_3 = _a.sent();
                     winston.info('dynamodb said no call log found');
                     winston.debug(e_3);
                     return [3 /*break*/, 6];
                 case 6:
                     callInfo.Caller = twilioCallData.from_formatted;
                     callInfo.CalledDate = twilioCallData.start_time;
-                    _b.label = 7;
-                case 7:
-                    _b.trys.push([7, 9, , 10]);
-                    _a = callInfo;
-                    return [4 /*yield*/, getMP3duration(notification.recordingFile)];
-                case 8:
-                    _a.CallDuration = _b.sent();
-                    return [3 /*break*/, 10];
-                case 9:
-                    e_4 = _b.sent();
-                    winston.error('unable to parse duration off mp3. Using provided value (if set)');
                     callInfo.CallDuration = twilioCallData.duration; // maybe unknow (source null)
-                    return [3 /*break*/, 10];
-                case 10:
                     notification.setCallerInfo(callInfo);
                     return [2 /*return*/, notification]; //can i even return this?
             }
@@ -288,7 +278,7 @@ function listAllRecordings() {
 }
 function uploadFileToS3(bucket, keyprefix, filename, file) {
     return __awaiter(this, void 0, void 0, function () {
-        var s3, params, e_5;
+        var s3, params, e_4;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -307,9 +297,9 @@ function uploadFileToS3(bucket, keyprefix, filename, file) {
                     winston.info("File uploaded to S3:  " + filename);
                     return [3 /*break*/, 4];
                 case 3:
-                    e_5 = _a.sent();
-                    winston.debug(e_5); // an error occurred
-                    winston.error("failed S3 upload: " + e_5);
+                    e_4 = _a.sent();
+                    winston.debug(e_4); // an error occurred
+                    winston.error("failed S3 upload: " + e_4);
                     throw new Error('unable to upload to S3');
                 case 4: return [2 /*return*/];
             }
@@ -323,6 +313,30 @@ function getSigngedURL(bucket, keyprefix, filename) {
     var url = s3.getSignedUrl('getObject', params);
     console.log('The URL is', url); // expires in 4000 seconds (over an hour) 
     return url;
+}
+function getRecordingLength(call, file) {
+    return __awaiter(this, void 0, void 0, function () {
+        var _a, e_5;
+        return __generator(this, function (_b) {
+            switch (_b.label) {
+                case 0:
+                    if (!(call.CallDuration === null)) return [3 /*break*/, 4];
+                    _b.label = 1;
+                case 1:
+                    _b.trys.push([1, 3, , 4]);
+                    _a = call;
+                    return [4 /*yield*/, getMP3duration(file)];
+                case 2:
+                    _a.CallDuration = _b.sent();
+                    return [3 /*break*/, 4];
+                case 3:
+                    e_5 = _b.sent();
+                    winston.error('unable to parse duration off mp3. Using provided value (if set)');
+                    return [3 /*break*/, 4];
+                case 4: return [2 /*return*/, call];
+            }
+        });
+    });
 }
 function CleanUpTwilioRecording(recordingSid) {
     twilioClient.recordings(recordingSid)
