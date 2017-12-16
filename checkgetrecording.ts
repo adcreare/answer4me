@@ -68,6 +68,10 @@ async function main(cb){
   
       winston.info('downloading audio and uploading to S3')
       notification = await DownloadAndUploadAllCallAudio(notification);
+
+      // winston.info('try and get recording length')
+      // await notification.setCallerInfo(getRecordingLength(
+      //   notification.getCallerInfo(),notification.recordingFile));
   
       winston.info('Make notification')
       MakeNotification(notification);
@@ -175,19 +179,9 @@ async function addCallerInformation(notification: Notification)
   
 
   callInfo.Caller = twilioCallData.from_formatted
-  
   callInfo.CalledDate = twilioCallData.start_time
-    
-
-  // try and get duration
-  try{
-    callInfo.CallDuration = await getMP3duration(notification.recordingFile)
-  }
-  catch(e)
-  {
-    winston.error('unable to parse duration off mp3. Using provided value (if set)')
-    callInfo.CallDuration = twilioCallData.duration // maybe unknow (source null)
-  }
+  callInfo.CallDuration = twilioCallData.duration // maybe unknow (source null)
+  
 
   notification.setCallerInfo(callInfo);
   
@@ -277,6 +271,26 @@ function getSigngedURL(bucket,keyprefix,filename): string
 
   return url
   
+}
+
+async function getRecordingLength(call: CallInfo, file: Buffer)
+{
+
+  if (call.CallDuration === null)
+  {    
+    // try and get duration
+    try{
+      call.CallDuration = await getMP3duration(file)
+    }
+    catch(e)
+    {
+      winston.error('unable to parse duration off mp3. Using provided value (if set)')
+    }
+
+  }
+
+  return call;
+
 }
 
 
