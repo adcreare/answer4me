@@ -1,16 +1,15 @@
 export class CallInfo {
 
-    
-    public callerNumberFormatted: string
+    public callerNumberFormatted: string;
 
-    public Caller: string
-    public CallerCountry: string
-    public CallerState: string
-    public CallerZip: string
-    public CallerCity: string
+    public Caller: string;
+    public CallerCountry: string;
+    public CallerState: string;
+    public CallerZip: string;
+    public CallerCity: string;
 
-    public CalledDate: Date
-    public CallDuration: String
+    public CalledDate: Date;
+    public CallDuration: string;
 
     // public callSid: string;
     // public recordingid: string;
@@ -18,15 +17,14 @@ export class CallInfo {
     // public recordingFileLocalPath: string;
     // public callInformation: CallInfo
     constructor(){
-      return
+      return;
     }
-  
-    public getListOfCallerObjectKeys(): Array<string>
+
+    public getListOfCallerObjectKeys(): string[]
     {
-        let returnObj: Array<string>
-        returnObj = ["Caller","CallerCountry","CallerState","CallerZip","CallerCity"];
-        
-        return returnObj
+        let returnObj: string[];
+        returnObj = ['Caller', 'CallerCountry', 'CallerState', 'CallerZip', 'CallerCity'];
+        return returnObj;
     }
 
   }
