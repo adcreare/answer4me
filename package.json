@@ -8,6 +8,8 @@
   },
   "devDependencies": {
     "@types/node": "^8.0.32",
+    "@types/request-promise-native": "^1.0.10",
+    "@types/winston": "^2.3.7",
     "serverless-webpack": "^2.2.0",
     "ts-loader": "^2.3.1",
     "typescript": "^2.5.3",
@@ -16,11 +18,8 @@
   "author": "The serverless webpack authors (https://github.com/elastic-coders/serverless-webpack)",
   "license": "MIT",
   "dependencies": {
-    "@types/request-promise-native": "^1.0.10",
-    "@types/winston": "^2.3.7",
     "aws-sdk": "^2.125.0",
     "mp3-duration": "^1.1.0",
-    "request": "^2.83.0",
     "request-promise-native": "^1.0.5",
     "twilio": "^3.6.5",
     "winston": "^2.3.1"

@@ -45,7 +45,7 @@ async function main(cb){
     cb(error); // make it retry in lambda
   }
 
-
+  // process the calls!
   listOfRecordings.forEach(async (call: TwilioCall) => {
     let callData: CallData;
 

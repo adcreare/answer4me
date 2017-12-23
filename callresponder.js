@@ -4,9 +4,12 @@ exports.__esModule = true;
 var DynamoDB = require("aws-sdk/clients/dynamodb");
 var Lambda = require("aws-sdk/clients/lambda");
 var twilio = require("twilio");
+var winston = require("winston");
 var config_1 = require("./config");
+var logger = winston;
+logger.level = 'debug';
 exports.phonein = function (event, context, cb) {
-    if (event.body.CallStatus == 'completed') {
+    if (event.body.CallStatus === 'completed') {
         TriggerProcessCompletedCallLambda(cb);
     }
     else {
@@ -14,72 +17,72 @@ exports.phonein = function (event, context, cb) {
     }
 };
 function TriggerProcessCompletedCallLambda(cb) {
-    console.log('TriggerProcessCompletedCallLambda');
+    logger.debug('TriggerProcessCompletedCallLambda');
     var lambda = new Lambda({ region: 'us-east-1' });
     var params = {
         FunctionName: 'answer4me-dev-checkgetrecording'
     };
     lambda.invoke(params, function (err, data) {
         if (err) {
-            console.log('Error Calling lambda');
-            console.log(err, err.stack); // an error occurred
+            logger.error('Error Calling lambda');
+            logger.error(err.message, err.stack); // an error occurred
             cb(err, 'unable to call getrecording');
         }
         else {
-            console.log(data); // successful response
+            logger.info('called lambda function - exit');
             cb(null, 'Completed');
         }
     });
 }
 function ProcessNewCall(event, cb) {
-    var twiml = new twilio.twiml.VoiceResponse;
+    logger.debug('event object');
+    logger.debug(JSON.stringify(event));
+    var twiml = new twilio.twiml.VoiceResponse();
     twiml.play({}, config_1.Config.welcomeMP3FileUrl);
     // twiml.say('Hello, David is unavailable at the moment, this is answer4me. Please leave a message after the tone');
     var output = twiml.toString();
     twiml.record({ timeout: 45 });
     twiml.hangup();
-    console.log('the event');
-    console.log(event);
-    console.log('response output');
-    console.log(output);
     cb(null, twiml.toString());
     try {
         PutCallInDynamoDB(event.body.CallSid, event.body.CallerCountry, event.body.CallerState, event.body.CallerZip, event.body.CallerCity, event.body.Caller);
     }
     catch (e) {
-        console.log('exception thrown with dynamo function call: ' + e);
+        logger.error('exception thrown with dynamo function call: ' + e);
     }
 }
 function PutCallInDynamoDB(callid, CallerCountry, CallerState, CallerZip, CallerCity, Caller) {
     var dynamodb = new DynamoDB({ region: 'us-east-1' });
     var params = {
         Item: {
-            "callid": {
+            callid: {
                 S: callid
             },
-            "CallerCountry": {
+            CallerCountry: {
                 S: CallerCountry
             },
-            "CallerState": {
+            CallerState: {
                 S: CallerState
             },
-            "CallerZip": {
+            CallerZip: {
                 S: CallerZip
             },
-            "CallerCity": {
+            CallerCity: {
                 S: CallerCity
             },
-            "Caller": {
+            Caller: {
                 S: Caller
             }
         },
-        TableName: "answer4me-call-log"
+        TableName: 'answer4me-call-log'
     };
     dynamodb.putItem(params, function (err, data) {
-        if (err)
-            console.log(err, err.stack); // an error occurred
-        else
-            console.log(data); // successful response
+        if (err) {
+            logger.error(err.message + err.stack);
+        } // an error occurred
+        else {
+            logger.debug(JSON.stringify(data));
+        } // successful response
     });
 }
 //# sourceMappingURL=callresponder.js.map
