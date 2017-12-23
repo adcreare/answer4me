@@ -11,7 +11,7 @@ var CallInfo = /** @class */ (function () {
     }
     CallInfo.prototype.getListOfCallerObjectKeys = function () {
         var returnObj;
-        returnObj = ["Caller", "CallerCountry", "CallerState", "CallerZip", "CallerCity"];
+        returnObj = ['Caller', 'CallerCountry', 'CallerState', 'CallerZip', 'CallerCity'];
         return returnObj;
     };
     return CallInfo;

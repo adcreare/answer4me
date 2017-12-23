@@ -1,42 +1,43 @@
 import {CallInfo} from './CallInfo';
 
-export class Notification {
+
+export class CallData {
   public callSid: string;
   public recordingid: string;
   public recordingPathURI: string;
   public recordingFile: Buffer;
   public recordingFileName: string;
-  private CallerInfo: CallInfo
+  public CallerInfo: CallInfo;
 
   constructor(){
-    return
+    return;
   }
 
   public setCallerInfo(callInformation)
   {
-    this.CallerInfo = callInformation
+    this.CallerInfo = callInformation;
     return true;
   }
   public getCallerInfo(): CallInfo{
     return this.CallerInfo;
   }
 
-  public setRecordingPathURI(url:string)
+  public setRecordingPathURI(url: string)
   {
-    this.recordingPathURI = url
-    let splitpath = url.split('/');
-    this.recordingFileName = splitpath[splitpath.length-1];
-    return
+    this.recordingPathURI = url;
+    const splitpath = url.split('/');
+    this.recordingFileName = splitpath[splitpath.length - 1];
+    return;
   }
 
-  getNotification(){
- 
+  public getNotification(){
+
     // let response = {
     //   CallInfo: this.CallerInfo,
     //   RecordingURL: this.recordingPathURI
     // }
 
-    let response = `*New Voicemail!* \n
+    const response = `*New Voicemail!* \n
     Caller: ${this.CallerInfo.Caller} \n
     City: ${this.CallerInfo.CallerCity} \n
     Country: ${this.CallerInfo.CallerCountry} \n

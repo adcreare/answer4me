@@ -1,107 +1,115 @@
 
 // var twilio = require("twilio");
-import DynamoDB = require("aws-sdk/clients/dynamodb");
-import Lambda = require("aws-sdk/clients/lambda");
+import DynamoDB = require('aws-sdk/clients/dynamodb');
+import Lambda = require('aws-sdk/clients/lambda');
 import * as twilio from 'twilio';
-import {Config} from './config'
+import * as winston from 'winston';
+import {Config} from './config';
+
+const logger = winston;
+logger.level = 'debug';
+
 
 export const phonein = (event, context, cb) => {
 
-  if(event.body.CallStatus == 'completed') {
+  if (event.body.CallStatus === 'completed') {
     TriggerProcessCompletedCallLambda(cb);
   }
   else{
-    ProcessNewCall(event,cb)
+    ProcessNewCall(event, cb);
   }
 
-
-}
+};
 
 function TriggerProcessCompletedCallLambda(cb){
-  console.log('TriggerProcessCompletedCallLambda');
+  logger.debug('TriggerProcessCompletedCallLambda');
 
-  let lambda = new Lambda({region:'us-east-1'});
+  const lambda = new Lambda({region: 'us-east-1'});
 
   const params = {
     FunctionName: 'answer4me-dev-checkgetrecording', /* required */
   };
-  lambda.invoke(params, function(err, data) {
+  lambda.invoke(params, (err, data) => {
     if (err)
     {
-      console.log('Error Calling lambda');
-      console.log(err, err.stack); // an error occurred
-      cb(err,'unable to call getrecording');
-    } 
+      logger.error('Error Calling lambda');
+      logger.error(err.message, err.stack); // an error occurred
+      cb(err, 'unable to call getrecording');
+    }
     else{
-      console.log(data);           // successful response
-      cb(null,'Completed');
+      logger.info('called lambda function - exit');
+      cb(null, 'Completed');
     }
 
   });
 
 }
 
-function ProcessNewCall(event,cb)
+function ProcessNewCall(event, cb)
 {
-  var twiml = new twilio.twiml.VoiceResponse
-  twiml.play({},Config.welcomeMP3FileUrl);
+  logger.debug('event object');
+  logger.debug(JSON.stringify(event));
+
+  const twiml = new twilio.twiml.VoiceResponse();
+  twiml.play({}, Config.welcomeMP3FileUrl);
   // twiml.say('Hello, David is unavailable at the moment, this is answer4me. Please leave a message after the tone');
 
-  let output: string = twiml.toString();
-  
+  const output: string = twiml.toString();
+
   twiml.record({timeout: 45});
   twiml.hangup();
-  
-  console.log('the event');
-  console.log(event);
-  console.log('response output');
-  console.log(output);
 
-  cb(null,twiml.toString());
+
+
+  cb(null, twiml.toString());
 
   try{
-    PutCallInDynamoDB(event.body.CallSid,event.body.CallerCountry,event.body.CallerState,
-      event.body.CallerZip,event.body.CallerCity,event.body.Caller)
+    PutCallInDynamoDB(event.body.CallSid, event.body.CallerCountry, event.body.CallerState,
+      event.body.CallerZip, event.body.CallerCity, event.body.Caller);
   }
   catch (e){
-    console.log('exception thrown with dynamo function call: ' + e);
+   logger.error('exception thrown with dynamo function call: ' + e);
   }
 
 }
 
 
-function PutCallInDynamoDB(callid,CallerCountry,CallerState,CallerZip,CallerCity,Caller){
+function PutCallInDynamoDB(callid, CallerCountry, CallerState, CallerZip, CallerCity, Caller){
 
-  let dynamodb = new DynamoDB({region: 'us-east-1'});
+  const dynamodb = new DynamoDB({region: 'us-east-1'});
 
   const params = {
     Item: {
-      "callid": {
+      callid: {
         S: callid
-      }, 
-      "CallerCountry": {
+      },
+      CallerCountry: {
         S: CallerCountry
-      }, 
-      "CallerState": {
+      },
+      CallerState: {
         S: CallerState
       },
-      "CallerZip": {
+      CallerZip: {
         S: CallerZip
       },
-      "CallerCity": {
+      CallerCity: {
         S: CallerCity
       },
-      "Caller": {
+      Caller: {
         S: Caller
       }
     },
-    TableName: "answer4me-call-log"
+    TableName: 'answer4me-call-log'
    };
 
 
-   dynamodb.putItem(params, function(err, data) {
-    if (err) console.log(err, err.stack); // an error occurred
-    else     console.log(data);           // successful response
+  dynamodb.putItem(params, (err, data) => {
+    if (err) {
+      logger.error(err.message + err.stack);
+     } // an error occurred
+    else {
+      logger.debug(JSON.stringify(data));
+    }         // successful response
   });
 
 }
