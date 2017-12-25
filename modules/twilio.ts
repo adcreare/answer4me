@@ -41,8 +41,13 @@ export async function getCallTwilioInfo(callSid: string): Promise<any>
   return twilioCallData;
 }
 
-export function deleteRecording(recordingSid: string)
+export function deleteRecording(recordingSid: string): Promise<any>
 {
-  twilioClient.recordings(recordingSid).remove();
+
+  return twilioClient.recordings(recordingSid).remove();
+  // return new Promise((resolve, reject) => {
+  //   twilioClient.recordings(recordingSid).remove()
+  //     .then(() => { resolve(); });
+  // });
 }
 
