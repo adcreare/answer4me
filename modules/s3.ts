@@ -1,8 +1,7 @@
 import S3 = require('aws-sdk/clients/s3');
 const s3 = new S3({region: 'us-east-1'});
 
-export async function uploadFileToS3(bucket, keyprefix, filename, file){
-
+export async function uploadFileToS3(bucket: string, keyprefix: string, filename: string, file: Buffer){
   const params = {
     Body: file,
     Bucket: bucket,

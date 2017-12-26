@@ -1,21 +1,26 @@
 {
-  "name": "aws-nodejs-typescript",
-  "version": "1.0.0",
+  "name": "answer-4-me",
+  "version": "0.0.1",
   "description": "Serverless webpack example using Typescript",
   "main": "handler.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "export AWS_REGION=us-east-1 && export AWS_ACCESS_KEY_ID=no && export AWS_SECRET_ACCESS_KEY=no && jest"
   },
   "devDependencies": {
+    "@types/nock": "^9.1.0",
     "@types/node": "^8.0.32",
     "@types/request-promise-native": "^1.0.10",
     "@types/winston": "^2.3.7",
+    "assert": "^1.4.1",
+    "jest": "^22.0.4",
+    "nock": "^9.1.5",
     "serverless-webpack": "^2.2.0",
+    "ts-jest": "^22.0.0",
     "ts-loader": "^2.3.1",
     "typescript": "^2.5.3",
     "webpack": "^3.3.0"
   },
-  "author": "The serverless webpack authors (https://github.com/elastic-coders/serverless-webpack)",
+  "author": "Adcreare",
   "license": "MIT",
   "dependencies": {
     "aws-sdk": "^2.125.0",
@@ -23,5 +28,23 @@
     "request-promise-native": "^1.0.5",
     "twilio": "^3.6.5",
     "winston": "^2.3.1"
+  },
+  "jest": {
+    "collectCoverage": true,
+    "collectCoverageFrom": [
+      "**/*.ts"
+    ],
+    "transform": {
+      "^.+\\.tsx?$": "ts-jest"
+    },
+    "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx",
+      "json",
+      "node"
+    ]
   }
 }

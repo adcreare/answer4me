@@ -15,6 +15,7 @@ import * as Slack from './modules/slack';
 import * as TwilioApi from './modules/twilio';
 
 const logger = winston;
+logger.add(winston.transports.File, { filename: 'somefile.log' });
 
 logger.level = 'debug';
 logger.info('Starting Application Answer 4 Me');
@@ -45,6 +46,8 @@ async function main(cb){
     cb(error); // make it retry in lambda
   }
 
+  const tasks: Array<Promise<any>> = [];
+
   // process the calls!
   listOfRecordings.forEach(async (call: TwilioCall) => {
     let callData: CallData;
@@ -64,10 +67,10 @@ async function main(cb){
       //   notification.getCallerInfo(),notification.recordingFile));
 
       logger.info('Make notification');
-      MakeNotification(callData);
+      tasks.push(MakeNotification(callData));
 
       logger.info('clean up ');
-      TwilioApi.deleteRecording(callData.recordingid);
+      tasks.push(TwilioApi.deleteRecording(callData.recordingid));
     }
     catch (e){
 
@@ -82,20 +85,36 @@ async function main(cb){
 
   });
 
+  try {
+    await Promise.all(tasks);
+    cb(null, {itemsprocessed: listOfRecordings.length, status: 'complete'});
+  }
+  catch (exception)
+  {
+    throw exception;
+  }
+
 }
 
 function MakeNotification(notification: CallData)
 {
-  Slack.postMessage(Config.slackPostWebhoock, notification.getNotification());
+  return Slack.postMessage(Config.slackPostWebhoock, notification.getNotification());
 }
 
-async function DownloadAndUploadAllCallAudio(notification: CallData)
+export async function DownloadAndUploadAllCallAudio(notification: CallData)
 {
+  logger.debug('Downloading call audio');
+  logger.debug(notification.recordingPathURI);
 
   notification.recordingFile = await util.httpGetBinary(notification.recordingPathURI);
 
+  logger.debug('uploading call audio');
+
+  console.log('about to make S3 call');
   await S3.uploadFileToS3('answer-4me', 'callrecordings',
         notification.recordingFileName, notification.recordingFile);
+
+  logger.debug('Getting signed url');
 
   notification.setRecordingPathURI(S3.getSigngedURL('answer-4me', 'callrecordings',
         notification.recordingFileName));
@@ -145,7 +164,6 @@ async function addCallerInformation(notification: CallData)
 
 
   notification.setCallerInfo(callInfo);
-
   return notification; // can i even return this?
 }
 
