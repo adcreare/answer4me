@@ -3,3 +3,4 @@ config.*
 .webpack
 node_modules/
 *.js.map
+coverage
