@@ -14,10 +14,13 @@ import * as S3 from './modules/s3';
 import * as Slack from './modules/slack';
 import * as TwilioApi from './modules/twilio';
 
-const logger = winston;
-logger.add(winston.transports.File, { filename: 'somefile.log' });
+const logger = winston.createLogger({
+  level: 'debug',
+  transports: [
+    new winston.transports.File({ filename: 'somefile.log' })
+  ]
+});
 
-logger.level = 'debug';
 logger.info('Starting Application Answer 4 Me');
 
 export const phonein = (event, context, cb) => {
